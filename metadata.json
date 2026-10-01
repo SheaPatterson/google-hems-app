@@ -1,0 +1,6 @@
+{
+  "name": "HEMS Flight Sim Companion (MSFS & X-Plane)",
+  "description": "Helicopter Emergency Medical Services flight companion for MSFS and X-Plane, powered by dispatch, mission cards, and docs from your Google Drive HENS folder.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

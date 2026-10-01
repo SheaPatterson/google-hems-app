@@ -1,0 +1,171 @@
+{
+  "entities": {
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "Pilot preferences, connected Google Drive HENS folder, active flight sim type, and aircraft setup",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase user UID",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "Pilot email address",
+          "maxLength": 256
+        },
+        "selectedFolderId": {
+          "type": "string",
+          "description": "ID of the connected Google Drive HENS folder",
+          "maxLength": 256
+        },
+        "selectedFolderName": {
+          "type": "string",
+          "description": "Name of the connected Google Drive folder",
+          "maxLength": 256
+        },
+        "activeSim": {
+          "type": "string",
+          "description": "Active flight simulator platform",
+          "enum": ["msfs", "xplane", "simulated"]
+        },
+        "selectedAircraftId": {
+          "type": "string",
+          "description": "Active HEMS helicopter airframe ID",
+          "maxLength": 64
+        },
+        "callsign": {
+          "type": "string",
+          "description": "HEMS unit callsign (e.g. MEDEVAC 1)",
+          "maxLength": 32
+        },
+        "homeBase": {
+          "type": "string",
+          "description": "Home hospital or airbase ICAO/FAA identifier",
+          "maxLength": 32
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update",
+          "maxLength": 64
+        }
+      },
+      "required": ["userId", "activeSim", "selectedAircraftId"]
+    },
+    "FlightLog": {
+      "title": "FlightLog",
+      "description": "HEMS mission flight log recording takeoff, LZ landing, patient transport, and flight time",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Log entry unique ID",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "Pilot user UID",
+          "maxLength": 128
+        },
+        "missionCode": {
+          "type": "string",
+          "description": "Dispatched HEMS mission code",
+          "maxLength": 64
+        },
+        "callsign": {
+          "type": "string",
+          "description": "Aircraft callsign",
+          "maxLength": 32
+        },
+        "aircraftModel": {
+          "type": "string",
+          "description": "Helicopter model (e.g. Airbus H145)",
+          "maxLength": 128
+        },
+        "departureLocation": {
+          "type": "string",
+          "description": "Departure base / helipad",
+          "maxLength": 128
+        },
+        "destinationLocation": {
+          "type": "string",
+          "description": "Destination hospital / trauma center",
+          "maxLength": 128
+        },
+        "flightDurationMin": {
+          "type": "number",
+          "description": "Flight duration in minutes"
+        },
+        "patientOutcome": {
+          "type": "string",
+          "description": "Patient status upon hospital handover",
+          "maxLength": 128
+        },
+        "completedAt": {
+          "type": "string",
+          "description": "ISO timestamp when flight concluded",
+          "maxLength": 64
+        }
+      },
+      "required": ["id", "userId", "missionCode", "flightDurationMin"]
+    },
+    "CustomMission": {
+      "title": "CustomMission",
+      "description": "User custom HEMS scenario or imported mission from Google Drive",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Mission unique ID",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "Pilot user UID",
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "description": "Mission incident title",
+          "maxLength": 256
+        },
+        "type": {
+          "type": "string",
+          "description": "Mission category",
+          "enum": ["hospital_transfer", "scene_response", "alpine_rescue", "highway_trauma", "pediatric_icu"]
+        },
+        "priority": {
+          "type": "string",
+          "description": "Dispatch priority level",
+          "enum": ["Alpha", "Bravo", "Charlie", "Echo"]
+        },
+        "destinationHelipad": {
+          "type": "string",
+          "description": "Receiving hospital helipad",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation",
+          "maxLength": 64
+        }
+      },
+      "required": ["id", "userId", "title", "type", "priority"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserSettings" },
+      "description": "Root document storing pilot preferences, connected Google Drive HENS folder, and sim setup"
+    },
+    "/users/{userId}/flightLogs/{logId}": {
+      "schema": { "$ref": "#/entities/FlightLog" },
+      "description": "Subcollection of HEMS flight logs, mission durations, and patient handovers"
+    },
+    "/users/{userId}/customMissions/{missionId}": {
+      "schema": { "$ref": "#/entities/CustomMission" },
+      "description": "Subcollection of saved or Drive-imported HEMS dispatch scenarios"
+    }
+  }
+}

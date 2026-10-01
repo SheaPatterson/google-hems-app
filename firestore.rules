@@ -1,0 +1,96 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Global Security Helpers
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    // Validation Blueprint for Pilot UserSettings
+    function isValidUserSettings(data, userId) {
+      return data.userId is string && data.userId == userId &&
+        data.activeSim in ['msfs', 'xplane', 'simulated'] &&
+        data.selectedAircraftId is string && data.selectedAircraftId.size() <= 64 &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 256)) &&
+        (!('selectedFolderId' in data) || (data.selectedFolderId is string && data.selectedFolderId.size() <= 256)) &&
+        (!('selectedFolderName' in data) || (data.selectedFolderName is string && data.selectedFolderName.size() <= 256)) &&
+        (!('callsign' in data) || (data.callsign is string && data.callsign.size() <= 32)) &&
+        (!('homeBase' in data) || (data.homeBase is string && data.homeBase.size() <= 32)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    // Validation Blueprint for FlightLog
+    function isValidFlightLog(data, userId) {
+      return data.id is string && data.id.size() <= 128 &&
+        data.userId is string && data.userId == userId &&
+        data.missionCode is string && data.missionCode.size() <= 64 &&
+        data.flightDurationMin is number && data.flightDurationMin >= 0 &&
+        (!('callsign' in data) || (data.callsign is string && data.callsign.size() <= 32)) &&
+        (!('aircraftModel' in data) || (data.aircraftModel is string && data.aircraftModel.size() <= 128)) &&
+        (!('departureLocation' in data) || (data.departureLocation is string && data.departureLocation.size() <= 128)) &&
+        (!('destinationLocation' in data) || (data.destinationLocation is string && data.destinationLocation.size() <= 128)) &&
+        (!('patientOutcome' in data) || (data.patientOutcome is string && data.patientOutcome.size() <= 128)) &&
+        (!('completedAt' in data) || (data.completedAt is string && data.completedAt.size() <= 64));
+    }
+
+    // Validation Blueprint for CustomMission
+    function isValidCustomMission(data, userId) {
+      return data.id is string && data.id.size() <= 128 &&
+        data.userId is string && data.userId == userId &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 256 &&
+        data.type in ['hospital_transfer', 'scene_response', 'alpine_rescue', 'highway_trauma', 'pediatric_icu'] &&
+        data.priority in ['Alpha', 'Bravo', 'Charlie', 'Echo'] &&
+        (!('destinationHelipad' in data) || (data.destinationHelipad is string && data.destinationHelipad.size() <= 128)) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64));
+    }
+
+    // User settings root collection
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserSettings(incoming(), userId);
+      allow update: if isOwner(userId) && isValidUserSettings(incoming(), userId) && incoming().userId == existing().userId;
+      allow delete: if isOwner(userId);
+
+      // Subcollection: Flight logs
+      match /flightLogs/{logId} {
+        allow get: if isOwner(userId) && isValidId(logId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(logId) && isValidFlightLog(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(logId) && isValidFlightLog(incoming(), userId) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(logId);
+      }
+
+      // Subcollection: Custom & Drive-imported missions
+      match /customMissions/{missionId} {
+        allow get: if isOwner(userId) && isValidId(missionId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(missionId) && isValidCustomMission(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(missionId) && isValidCustomMission(incoming(), userId) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(missionId);
+      }
+    }
+  }
+}
